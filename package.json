@@ -1,0 +1,9 @@
+{
+  "name": "bidamax-vercel-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BIDAMAX GitHub JSON cache/proxy for Vercel",
+  "engines": {
+    "node": ">=18"
+  }
+}
