@@ -8,7 +8,9 @@ function checkApiKey(req) {
   const requiredKey = process.env.BIDAMAX_API_KEY;
   if (!requiredKey) return true;
 
-  const headerKey = req.headers['x-api-key'];
+  const headerKey =
+    req.headers['x-bidamax-key'] ||
+    req.headers['x-api-key'];
   const queryKey = req.query && req.query.key;
   return headerKey === requiredKey || queryKey === requiredKey;
 }
