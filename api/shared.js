@@ -29,6 +29,7 @@ export function getDataRawUrl(path) {
   const branch = env("GITHUB_DATA_BRANCH", DEFAULTS.dataBranch);
   const basePath = env("GITHUB_DATA_BASE_PATH", DEFAULTS.dataBasePath).replace(/^\/+|\/+$/g, "");
   const cleanPath = String(path || "").replace(/^\/+/, "");
+
   return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${basePath}/${cleanPath}`;
 }
 
@@ -42,16 +43,21 @@ export function isSafeId(id) {
 
 function getClientIp(req) {
   const forwarded = req.headers["x-forwarded-for"];
+
   if (typeof forwarded === "string" && forwarded.length > 0) {
     return forwarded.split(",")[0].trim();
   }
+
   return req.socket?.remoteAddress || "unknown";
 }
 
 function cleanupRateMap(now) {
   if (rateMap.size < 1000) return;
+
   for (const [ip, data] of rateMap.entries()) {
-    if (!data || now > data.resetAt) rateMap.delete(ip);
+    if (!data || now > data.resetAt) {
+      rateMap.delete(ip);
+    }
   }
 }
 
@@ -60,7 +66,9 @@ export function checkAuth(req, res) {
 
   if (!requiredKey) {
     res.setHeader("Cache-Control", "no-store");
-    res.status(500).json({ error: "Missing BIDAMAX_API_KEY on Vercel" });
+    res.status(500).json({
+      error: "Missing BIDAMAX_API_KEY on Vercel"
+    });
     return false;
   }
 
@@ -68,16 +76,20 @@ export function checkAuth(req, res) {
     req.headers["x-bidamax-key"] ||
     req.headers["x-api-key"];
 
-  const allowQueryKey = process.env.ALLOW_QUERY_KEY === "true";
-  const queryKey = allowQueryKey && req.query ? req.query.key : undefined;
+  const queryKey = req.query ? req.query.key : undefined;
 
   if (headerKey !== requiredKey && queryKey !== requiredKey) {
     res.setHeader("Cache-Control", "no-store");
-    res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({
+      error: "Unauthorized"
+    });
     return false;
   }
 
-  if (!checkRateLimit(req, res)) return false;
+  if (!checkRateLimit(req, res)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -86,11 +98,16 @@ function checkRateLimit(req, res) {
   const max = toNumber(process.env.RATE_LIMIT_MAX, 240);
   const ip = getClientIp(req);
   const now = Date.now();
+
   cleanupRateMap(now);
 
   const current = rateMap.get(ip);
+
   if (!current || now > current.resetAt) {
-    rateMap.set(ip, { count: 1, resetAt: now + windowMs });
+    rateMap.set(ip, {
+      count: 1,
+      resetAt: now + windowMs
+    });
     return true;
   }
 
@@ -98,9 +115,14 @@ function checkRateLimit(req, res) {
 
   if (current.count > max) {
     const retryAfter = Math.ceil((current.resetAt - now) / 1000);
+
     res.setHeader("Retry-After", String(retryAfter));
     res.setHeader("Cache-Control", "no-store");
-    res.status(429).json({ error: "Too many requests", retryAfter });
+    res.status(429).json({
+      error: "Too many requests",
+      retryAfter
+    });
+
     return false;
   }
 
@@ -113,8 +135,6 @@ export function sendJsonText(res, status, body, extraHeaders = {}) {
   res.setHeader("X-Bidamax-Backend", "v4");
   res.setHeader("Vary", "X-Bidamax-Key, X-API-Key");
 
-  // Huwag gawing public CDN cache para hindi ma-bypass ang API key.
-  // Server memory cache ang gamit natin para hindi paulit-ulit kay GitHub.
   res.setHeader("Cache-Control", "private, max-age=60");
 
   for (const [k, v] of Object.entries(extraHeaders)) {
@@ -130,21 +150,33 @@ function buildSourceHeaders(cached) {
     "Accept": "application/json,text/plain,*/*"
   };
 
-  if (cached?.etag) headers["If-None-Match"] = cached.etag;
-  if (cached?.lastModified) headers["If-Modified-Since"] = cached.lastModified;
-  if (process.env.GITHUB_TOKEN) headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  if (cached?.etag) {
+    headers["If-None-Match"] = cached.etag;
+  }
+
+  if (cached?.lastModified) {
+    headers["If-Modified-Since"] = cached.lastModified;
+  }
+
+  if (process.env.GITHUB_TOKEN) {
+    headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
 
   return headers;
 }
 
 function makeErrorBody(error, status, message) {
-  return JSON.stringify({ error, status, message });
+  return JSON.stringify({
+    error,
+    status,
+    message
+  });
 }
 
 export async function fetchCachedJson(url, options = {}) {
   const cacheKey = options.cacheKey || url;
   const ttlSeconds = toNumber(options.ttlSeconds, 1800);
-  const staleSeconds = toNumber(options.staleSeconds, 604800); // 7 days stale backup
+  const staleSeconds = toNumber(options.staleSeconds, 604800);
   const now = Date.now();
   const cached = memoryCache.get(cacheKey);
 
@@ -159,13 +191,17 @@ export async function fetchCachedJson(url, options = {}) {
   }
 
   try {
-    const response = await fetch(url, { headers: buildSourceHeaders(cached) });
+    const response = await fetch(url, {
+      headers: buildSourceHeaders(cached)
+    });
 
     if (response.status === 304 && cached) {
       cached.expiresAt = now + ttlSeconds * 1000;
       cached.lastCheckAt = now;
       cached.sourceStatus = 304;
+
       memoryCache.set(cacheKey, cached);
+
       return {
         body: cached.body,
         status: 200,
@@ -187,8 +223,13 @@ export async function fetchCachedJson(url, options = {}) {
       }
 
       const text = await response.text().catch(() => "");
+
       return {
-        body: makeErrorBody("Source fetch failed", response.status, text.slice(0, 300)),
+        body: makeErrorBody(
+          "Source fetch failed",
+          response.status,
+          text.slice(0, 300)
+        ),
         status: response.status,
         cache: "MISS",
         sourceStatus: response.status,
@@ -197,7 +238,8 @@ export async function fetchCachedJson(url, options = {}) {
     }
 
     const text = await response.text();
-    JSON.parse(text); // validate JSON bago i-cache
+
+    JSON.parse(text);
 
     const entry = {
       body: text,
@@ -230,7 +272,11 @@ export async function fetchCachedJson(url, options = {}) {
     }
 
     return {
-      body: makeErrorBody("Fetch error", 500, String(error?.message || error)),
+      body: makeErrorBody(
+        "Fetch error",
+        500,
+        String(error?.message || error)
+      ),
       status: 500,
       cache: "ERROR",
       sourceStatus: 0,
@@ -240,7 +286,9 @@ export async function fetchCachedJson(url, options = {}) {
 }
 
 export async function serveCachedJson(req, res, config) {
-  if (!checkAuth(req, res)) return;
+  if (!checkAuth(req, res)) {
+    return;
+  }
 
   const result = await fetchCachedJson(config.url, {
     cacheKey: config.cacheKey,
@@ -263,11 +311,13 @@ export function purgeCache(target) {
   }
 
   let count = 0;
+
   for (const key of Array.from(memoryCache.keys())) {
     if (key === target || key.startsWith(target + ":")) {
       memoryCache.delete(key);
       count++;
     }
   }
+
   return count;
 }
