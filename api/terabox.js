@@ -62,6 +62,10 @@ function isValidGeneratorResponse(data) {
   return Boolean(data && Array.isArray(data.list) && data.list.length > 0);
 }
 
+function withCacheStatus(data, status) {
+  return { ...data, _bidamax_cache: status };
+}
+
 async function readCache(key) {
   const value = await redisCommand(["GET", key]);
   if (!value) return null;
@@ -127,7 +131,7 @@ export default async function handler(req, res) {
   try {
     const cached = await readCache(key);
     if (cached) {
-      return json(res, 200, cached, { "X-Bidamax-Cache": "HIT" });
+      return json(res, 200, withCacheStatus(cached, "HIT"), { "X-Bidamax-Cache": "HIT" });
     }
 
     const acquired = await redisCommand([
@@ -140,7 +144,7 @@ export default async function handler(req, res) {
         await redisCommand([
           "SET", key, JSON.stringify(generated), "EX", String(CACHE_TTL_SECONDS)
         ]);
-        return json(res, 200, generated, { "X-Bidamax-Cache": "MISS" });
+        return json(res, 200, withCacheStatus(generated, "MISS"), { "X-Bidamax-Cache": "MISS" });
       } finally {
         const currentToken = await redisCommand(["GET", lockKey]).catch(() => null);
         if (currentToken === lockToken) {
@@ -153,7 +157,7 @@ export default async function handler(req, res) {
       await sleep(WAIT_DELAY_MS);
       const waitingResult = await readCache(key);
       if (waitingResult) {
-        return json(res, 200, waitingResult, { "X-Bidamax-Cache": "WAIT-HIT" });
+        return json(res, 200, withCacheStatus(waitingResult, "WAIT-HIT"), { "X-Bidamax-Cache": "WAIT-HIT" });
       }
     }
 
@@ -163,7 +167,7 @@ export default async function handler(req, res) {
     await redisCommand([
       "SET", key, JSON.stringify(generated), "EX", String(CACHE_TTL_SECONDS)
     ]);
-    return json(res, 200, generated, { "X-Bidamax-Cache": "FALLBACK-MISS" });
+    return json(res, 200, withCacheStatus(generated, "FALLBACK-MISS"), { "X-Bidamax-Cache": "FALLBACK-MISS" });
   } catch (error) {
     console.error("[terabox-cache]", error);
     return json(res, error.status || 500, {
