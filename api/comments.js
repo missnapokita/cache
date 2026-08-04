@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 const MAX_COMMENTS = 200;
-const COMMENT_COOLDOWN_SECONDS = 7;
+const MAX_REPLIES = 100;
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -10,7 +10,7 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function redisConfig() {
+function cfg() {
   return {
     url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN
@@ -18,55 +18,58 @@ function redisConfig() {
 }
 
 async function redis(command) {
-  const { url, token } = redisConfig();
-  if (!url || !token) throw new Error("Redis environment variables are missing");
-  const response = await fetch(url, {
+  const { url, token } = cfg();
+  if (!url || !token) throw new Error("Redis REST environment variables are missing");
+  const r = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(command)
   });
-  const data = await response.json().catch(() => null);
-  if (!response.ok || !data || data.error) throw new Error(data?.error || `Redis failed (${response.status})`);
+  const data = await r.json().catch(() => null);
+  if (!r.ok || !data || data.error) throw new Error(data?.error || `Redis failed (${r.status})`);
   return data.result;
 }
 
-function clean(value, max) {
-  return String(value || "").trim().slice(0, max);
+const clean = (v, max = 400) => String(v || "").trim().slice(0, max);
+const keySafe = (v) => clean(v, 180).replace(/[^a-zA-Z0-9:_-]/g, "_");
+const commentKey = (contentKey) => `bidamax:comments:v2:${keySafe(contentKey)}`;
+const repliesKey = (contentKey, commentId) => `bidamax:replies:v2:${keySafe(contentKey)}:${keySafe(commentId)}`;
+const profileKey = (userId) => `bidamax:profile:v2:${keySafe(userId)}`;
+const deletedKey = (contentKey) => `bidamax:comments:deleted:v2:${keySafe(contentKey)}`;
+
+async function getProfile(userId) {
+  const raw = await redis(["GET", profileKey(userId)]);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
 }
 
-function validKey(key) {
-  return /^(movie|series):[a-zA-Z0-9_-]{1,80}$/.test(key);
+async function readJsonList(key, limit) {
+  const rows = await redis(["LRANGE", key, "0", String(limit - 1)]);
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r) => { try { return JSON.parse(r); } catch { return null; } }).filter(Boolean);
+}
+
+async function getComments(contentKey) {
+  const comments = await readJsonList(commentKey(contentKey), MAX_COMMENTS);
+  const deleted = await redis(["HGETALL", deletedKey(contentKey)]).catch(() => []);
+  const deletedSet = new Set();
+  if (Array.isArray(deleted)) for (let i = 0; i < deleted.length; i += 2) deletedSet.add(deleted[i]);
+
+  const visible = comments.filter((c) => c && c.id && !deletedSet.has(c.id));
+  await Promise.all(visible.map(async (c) => {
+    const replies = await readJsonList(repliesKey(contentKey, c.id), MAX_REPLIES);
+    c.replies = replies.reverse();
+    c.reply_count = c.replies.length;
+  }));
+  return visible;
 }
 
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const contentKey = clean(req.query?.content_key, 90);
-      if (!validKey(contentKey)) return json(res, 400, { error: "Invalid content_key" });
-
-      const raw = await redis(["LRANGE", `bidamax:comments:${contentKey}`, "0", String(MAX_COMMENTS - 1)]);
-      const comments = [];
-      const userIds = [];
-      for (const value of raw || []) {
-        try {
-          const item = JSON.parse(value);
-          comments.push(item);
-          if (item.user_id && !userIds.includes(item.user_id)) userIds.push(item.user_id);
-        } catch {}
-      }
-
-      let profiles = [];
-      if (userIds.length) profiles = await redis(["MGET", ...userIds.map(id => `bidamax:profile:${id}`)]);
-      const profileMap = new Map();
-      userIds.forEach((id, index) => {
-        try { profileMap.set(id, JSON.parse(profiles[index] || "{}")); } catch { profileMap.set(id, {}); }
-      });
-
-      const hydrated = comments.map(item => {
-        const profile = profileMap.get(item.user_id) || {};
-        return { ...item, username: profile.username || "User", avatar: profile.avatar || "" };
-      });
-      return json(res, 200, { comments: hydrated });
+      const contentKey = clean(req.query?.content_key, 180);
+      if (!contentKey) return json(res, 400, { error: "content_key is required" });
+      return json(res, 200, { comments: await getComments(contentKey) });
     }
 
     if (req.method !== "POST") {
@@ -74,47 +77,69 @@ export default async function handler(req, res) {
       return json(res, 405, { error: "Method not allowed" });
     }
 
-    const action = clean(req.body?.action, 20);
-    const userId = clean(req.body?.user_id, 80);
-    if (!/^[a-zA-Z0-9-]{10,80}$/.test(userId)) return json(res, 400, { error: "Invalid user_id" });
+    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+    const action = clean(body.action, 40);
+    const userId = keySafe(body.user_id);
+    if (!userId) return json(res, 400, { error: "user_id is required" });
 
     if (action === "profile") {
-      const username = clean(req.body?.username, 24);
-      const avatar = clean(req.body?.avatar, 24000);
+      const username = clean(body.username, 24);
+      const avatar = clean(body.avatar, 120000);
       if (username.length < 2) return json(res, 400, { error: "Username is too short" });
-      if (avatar && !/^[A-Za-z0-9+/=]+$/.test(avatar)) return json(res, 400, { error: "Invalid avatar" });
-      await redis(["SET", `bidamax:profile:${userId}`, JSON.stringify({ username, avatar, updated_at: Date.now() })]);
+      const profile = { user_id: userId, username, avatar, updated_at: Date.now() };
+      await redis(["SET", profileKey(userId), JSON.stringify(profile)]);
       return json(res, 200, { ok: true });
     }
 
+    const contentKey = clean(body.content_key, 180);
+    if (!contentKey) return json(res, 400, { error: "content_key is required" });
+    const profile = await getProfile(userId);
+    if (!profile) return json(res, 403, { error: "Create your profile first" });
+
     if (action === "comment") {
-      const contentKey = clean(req.body?.content_key, 90);
-      const message = clean(req.body?.message, 400);
-      if (!validKey(contentKey)) return json(res, 400, { error: "Invalid content_key" });
+      const message = clean(body.message, 400);
       if (!message) return json(res, 400, { error: "Comment is empty" });
-
-      const profile = await redis(["GET", `bidamax:profile:${userId}`]);
-      if (!profile) return json(res, 401, { error: "Create a profile first" });
-
-      const cooldownKey = `bidamax:comment-cooldown:${userId}`;
-      const allowed = await redis(["SET", cooldownKey, "1", "NX", "EX", String(COMMENT_COOLDOWN_SECONDS)]);
-      if (allowed !== "OK") return json(res, 429, { error: "Please wait before commenting again" });
-
       const item = {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        message,
-        created_at: Date.now()
+        id: crypto.randomUUID(), user_id: userId,
+        username: profile.username, avatar: profile.avatar || "",
+        message, created_at: Date.now(), reply_count: 0, replies: []
       };
-      const listKey = `bidamax:comments:${contentKey}`;
-      await redis(["LPUSH", listKey, JSON.stringify(item)]);
-      await redis(["LTRIM", listKey, "0", String(MAX_COMMENTS - 1)]);
+      const key = commentKey(contentKey);
+      await redis(["LPUSH", key, JSON.stringify(item)]);
+      await redis(["LTRIM", key, "0", String(MAX_COMMENTS - 1)]);
       return json(res, 200, { ok: true, comment: item });
+    }
+
+    if (action === "reply") {
+      const commentId = keySafe(body.comment_id);
+      const message = clean(body.message, 400);
+      if (!commentId || !message) return json(res, 400, { error: "Reply data is incomplete" });
+      const reply = {
+        id: crypto.randomUUID(), user_id: userId,
+        username: profile.username, avatar: profile.avatar || "",
+        message, created_at: Date.now()
+      };
+      const key = repliesKey(contentKey, commentId);
+      await redis(["LPUSH", key, JSON.stringify(reply)]);
+      await redis(["LTRIM", key, "0", String(MAX_REPLIES - 1)]);
+      return json(res, 200, { ok: true, reply });
+    }
+
+    if (action === "delete_comment") {
+      const commentId = keySafe(body.comment_id);
+      if (!commentId) return json(res, 400, { error: "comment_id is required" });
+      const comments = await readJsonList(commentKey(contentKey), MAX_COMMENTS);
+      const found = comments.find((c) => c?.id === commentId);
+      if (!found) return json(res, 404, { error: "Comment not found" });
+      if (found.user_id !== userId) return json(res, 403, { error: "You can only delete your own comment" });
+      await redis(["HSET", deletedKey(contentKey), commentId, String(Date.now())]);
+      await redis(["DEL", repliesKey(contentKey, commentId)]).catch(() => null);
+      return json(res, 200, { ok: true });
     }
 
     return json(res, 400, { error: "Unknown action" });
   } catch (error) {
-    console.error("[comments]", error);
-    return json(res, 500, { error: "Comments service unavailable", message: error.message });
+    console.error("[comments-api]", error);
+    return json(res, 500, { error: "Comments service failed", message: error.message || "Unknown error" });
   }
 }
