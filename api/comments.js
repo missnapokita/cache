@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 const MAX_COMMENTS = 200;
-const MAX_REPLIES = 100;
+const MAX_TEXT = 400;
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -10,7 +10,7 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function cfg() {
+function redisConfig() {
   return {
     url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN
@@ -18,58 +18,62 @@ function cfg() {
 }
 
 async function redis(command) {
-  const { url, token } = cfg();
+  const { url, token } = redisConfig();
   if (!url || !token) throw new Error("Redis REST environment variables are missing");
-  const r = await fetch(url, {
+  const response = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(command)
   });
-  const data = await r.json().catch(() => null);
-  if (!r.ok || !data || data.error) throw new Error(data?.error || `Redis failed (${r.status})`);
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data || data.error) throw new Error(data?.error || `Redis error ${response.status}`);
   return data.result;
 }
 
-const clean = (v, max = 400) => String(v || "").trim().slice(0, max);
-const keySafe = (v) => clean(v, 180).replace(/[^a-zA-Z0-9:_-]/g, "_");
-const commentKey = (contentKey) => `bidamax:comments:v2:${keySafe(contentKey)}`;
-const repliesKey = (contentKey, commentId) => `bidamax:replies:v2:${keySafe(contentKey)}:${keySafe(commentId)}`;
-const profileKey = (userId) => `bidamax:profile:v2:${keySafe(userId)}`;
-const deletedKey = (contentKey) => `bidamax:comments:deleted:v2:${keySafe(contentKey)}`;
-
-async function getProfile(userId) {
-  const raw = await redis(["GET", profileKey(userId)]);
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+function clean(value, max = MAX_TEXT) {
+  return String(value || "").trim().slice(0, max);
+}
+function commentsKey(contentKey) { return `bidamax:comments:v1:${contentKey}`; }
+function profileKey(userId) { return `bidamax:profile:v1:${userId}`; }
+async function readJson(key, fallback) {
+  const raw = await redis(["GET", key]);
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); } catch { return fallback; }
+}
+async function writeJson(key, value) { await redis(["SET", key, JSON.stringify(value)]); }
+async function profile(userId) {
+  return await readJson(profileKey(userId), { username: "User", avatar: "" });
 }
 
-async function readJsonList(key, limit) {
-  const rows = await redis(["LRANGE", key, "0", String(limit - 1)]);
-  if (!Array.isArray(rows)) return [];
-  return rows.map((r) => { try { return JSON.parse(r); } catch { return null; } }).filter(Boolean);
-}
-
-async function getComments(contentKey) {
-  const comments = await readJsonList(commentKey(contentKey), MAX_COMMENTS);
-  const deleted = await redis(["HGETALL", deletedKey(contentKey)]).catch(() => []);
-  const deletedSet = new Set();
-  if (Array.isArray(deleted)) for (let i = 0; i < deleted.length; i += 2) deletedSet.add(deleted[i]);
-
-  const visible = comments.filter((c) => c && c.id && !deletedSet.has(c.id));
-  await Promise.all(visible.map(async (c) => {
-    const replies = await readJsonList(repliesKey(contentKey, c.id), MAX_REPLIES);
-    c.replies = replies.reverse();
-    c.reply_count = c.replies.length;
-  }));
-  return visible;
+async function hydrate(comments) {
+  const profileCache = new Map();
+  async function get(uid) {
+    if (!profileCache.has(uid)) profileCache.set(uid, await profile(uid));
+    return profileCache.get(uid);
+  }
+  for (const comment of comments) {
+    const p = await get(comment.user_id);
+    comment.username = p.username || "User";
+    comment.avatar = p.avatar || "";
+    comment.replies = Array.isArray(comment.replies) ? comment.replies : [];
+    for (const reply of comment.replies) {
+      const rp = await get(reply.user_id);
+      reply.username = rp.username || "User";
+      reply.avatar = rp.avatar || "";
+    }
+    comment.reply_count = comment.replies.length;
+  }
+  return comments;
 }
 
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const contentKey = clean(req.query?.content_key, 180);
+      const contentKey = clean(req.query?.content_key, 160);
       if (!contentKey) return json(res, 400, { error: "content_key is required" });
-      return json(res, 200, { comments: await getComments(contentKey) });
+      const comments = await readJson(commentsKey(contentKey), []);
+      comments.sort((a,b) => Number(b.created_at || 0) - Number(a.created_at || 0));
+      return json(res, 200, { comments: await hydrate(comments.slice(0, MAX_COMMENTS)) });
     }
 
     if (req.method !== "POST") {
@@ -77,69 +81,71 @@ export default async function handler(req, res) {
       return json(res, 405, { error: "Method not allowed" });
     }
 
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+    const body = req.body || {};
     const action = clean(body.action, 40);
-    const userId = keySafe(body.user_id);
-    if (!userId) return json(res, 400, { error: "user_id is required" });
+    const userId = clean(body.user_id, 120);
+    if (!action || !userId) return json(res, 400, { error: "action and user_id are required" });
 
     if (action === "profile") {
-      const username = clean(body.username, 24);
-      const avatar = clean(body.avatar, 120000);
-      if (username.length < 2) return json(res, 400, { error: "Username is too short" });
-      const profile = { user_id: userId, username, avatar, updated_at: Date.now() };
-      await redis(["SET", profileKey(userId), JSON.stringify(profile)]);
+      const username = clean(body.username, 40);
+      if (!username) return json(res, 400, { error: "Username is required" });
+      await writeJson(profileKey(userId), { username, avatar: String(body.avatar || "").slice(0, 800000) });
       return json(res, 200, { ok: true });
     }
 
-    const contentKey = clean(body.content_key, 180);
+    const contentKey = clean(body.content_key, 160);
     if (!contentKey) return json(res, 400, { error: "content_key is required" });
-    const profile = await getProfile(userId);
-    if (!profile) return json(res, 403, { error: "Create your profile first" });
+    const key = commentsKey(contentKey);
+    const comments = await readJson(key, []);
+    const message = clean(body.message);
+    const commentId = clean(body.comment_id, 100);
+    const replyId = clean(body.reply_id, 100);
 
     if (action === "comment") {
-      const message = clean(body.message, 400);
       if (!message) return json(res, 400, { error: "Comment is empty" });
-      const item = {
-        id: crypto.randomUUID(), user_id: userId,
-        username: profile.username, avatar: profile.avatar || "",
-        message, created_at: Date.now(), reply_count: 0, replies: []
-      };
-      const key = commentKey(contentKey);
-      await redis(["LPUSH", key, JSON.stringify(item)]);
-      await redis(["LTRIM", key, "0", String(MAX_COMMENTS - 1)]);
-      return json(res, 200, { ok: true, comment: item });
+      comments.unshift({ id: crypto.randomUUID(), user_id: userId, message, created_at: Date.now(), replies: [] });
+      if (comments.length > MAX_COMMENTS) comments.length = MAX_COMMENTS;
+    } else if (action === "reply") {
+      if (!message) return json(res, 400, { error: "Reply is empty" });
+      const comment = comments.find(x => x.id === commentId);
+      if (!comment) return json(res, 404, { error: "Comment not found" });
+      comment.replies = Array.isArray(comment.replies) ? comment.replies : [];
+      comment.replies.push({ id: crypto.randomUUID(), user_id: userId, message, created_at: Date.now() });
+    } else if (action === "edit_comment") {
+      if (!message) return json(res, 400, { error: "Comment is empty" });
+      const comment = comments.find(x => x.id === commentId);
+      if (!comment) return json(res, 404, { error: "Comment not found" });
+      if (comment.user_id !== userId) return json(res, 403, { error: "Not allowed" });
+      comment.message = message;
+      comment.edited_at = Date.now();
+    } else if (action === "delete_comment") {
+      const index = comments.findIndex(x => x.id === commentId);
+      if (index < 0) return json(res, 404, { error: "Comment not found" });
+      if (comments[index].user_id !== userId) return json(res, 403, { error: "Not allowed" });
+      comments.splice(index, 1);
+    } else if (action === "edit_reply") {
+      if (!message) return json(res, 400, { error: "Reply is empty" });
+      const comment = comments.find(x => x.id === commentId);
+      const reply = comment?.replies?.find(x => x.id === replyId);
+      if (!reply) return json(res, 404, { error: "Reply not found" });
+      if (reply.user_id !== userId) return json(res, 403, { error: "Not allowed" });
+      reply.message = message;
+      reply.edited_at = Date.now();
+    } else if (action === "delete_reply") {
+      const comment = comments.find(x => x.id === commentId);
+      if (!comment || !Array.isArray(comment.replies)) return json(res, 404, { error: "Reply not found" });
+      const index = comment.replies.findIndex(x => x.id === replyId);
+      if (index < 0) return json(res, 404, { error: "Reply not found" });
+      if (comment.replies[index].user_id !== userId) return json(res, 403, { error: "Not allowed" });
+      comment.replies.splice(index, 1);
+    } else {
+      return json(res, 400, { error: "Unknown action" });
     }
 
-    if (action === "reply") {
-      const commentId = keySafe(body.comment_id);
-      const message = clean(body.message, 400);
-      if (!commentId || !message) return json(res, 400, { error: "Reply data is incomplete" });
-      const reply = {
-        id: crypto.randomUUID(), user_id: userId,
-        username: profile.username, avatar: profile.avatar || "",
-        message, created_at: Date.now()
-      };
-      const key = repliesKey(contentKey, commentId);
-      await redis(["LPUSH", key, JSON.stringify(reply)]);
-      await redis(["LTRIM", key, "0", String(MAX_REPLIES - 1)]);
-      return json(res, 200, { ok: true, reply });
-    }
-
-    if (action === "delete_comment") {
-      const commentId = keySafe(body.comment_id);
-      if (!commentId) return json(res, 400, { error: "comment_id is required" });
-      const comments = await readJsonList(commentKey(contentKey), MAX_COMMENTS);
-      const found = comments.find((c) => c?.id === commentId);
-      if (!found) return json(res, 404, { error: "Comment not found" });
-      if (found.user_id !== userId) return json(res, 403, { error: "You can only delete your own comment" });
-      await redis(["HSET", deletedKey(contentKey), commentId, String(Date.now())]);
-      await redis(["DEL", repliesKey(contentKey, commentId)]).catch(() => null);
-      return json(res, 200, { ok: true });
-    }
-
-    return json(res, 400, { error: "Unknown action" });
+    await writeJson(key, comments);
+    return json(res, 200, { ok: true });
   } catch (error) {
-    console.error("[comments-api]", error);
-    return json(res, 500, { error: "Comments service failed", message: error.message || "Unknown error" });
+    console.error("[comments]", error);
+    return json(res, 500, { error: error.message || "Comments request failed" });
   }
 }
