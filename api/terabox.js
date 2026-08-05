@@ -124,14 +124,25 @@ export default async function handler(req, res) {
     return json(res, 400, { error: "A valid url is required" });
   }
 
+  // The app sends forceRefresh=true only when a cached stream was returned
+  // but every generated quality failed the actual WebView playback test.
+  const forceRefresh = req.body?.forceRefresh === true ||
+    String(req.body?.forceRefresh || "").toLowerCase() === "true";
+
   const key = cacheKeyFor(url);
   const lockKey = `${key}:lock`;
   const lockToken = crypto.randomUUID();
 
   try {
-    const cached = await readCache(key);
-    if (cached) {
-      return json(res, 200, withCacheStatus(cached, "HIT"), { "X-Bidamax-Cache": "HIT" });
+    if (forceRefresh) {
+      // Remove the stale generated-link response, then regenerate and overwrite it.
+      // The lock below still prevents normal requests from generating duplicates.
+      await redisCommand(["DEL", key]).catch(() => null);
+    } else {
+      const cached = await readCache(key);
+      if (cached) {
+        return json(res, 200, withCacheStatus(cached, "HIT"), { "X-Bidamax-Cache": "HIT" });
+      }
     }
 
     const acquired = await redisCommand([
@@ -144,7 +155,7 @@ export default async function handler(req, res) {
         await redisCommand([
           "SET", key, JSON.stringify(generated), "EX", String(CACHE_TTL_SECONDS)
         ]);
-        return json(res, 200, withCacheStatus(generated, "MISS"), { "X-Bidamax-Cache": "MISS" });
+        return json(res, 200, withCacheStatus(generated, forceRefresh ? "FORCE-MISS" : "MISS"), { "X-Bidamax-Cache": forceRefresh ? "FORCE-MISS" : "MISS" });
       } finally {
         const currentToken = await redisCommand(["GET", lockKey]).catch(() => null);
         if (currentToken === lockToken) {
@@ -157,7 +168,7 @@ export default async function handler(req, res) {
       await sleep(WAIT_DELAY_MS);
       const waitingResult = await readCache(key);
       if (waitingResult) {
-        return json(res, 200, withCacheStatus(waitingResult, "WAIT-HIT"), { "X-Bidamax-Cache": "WAIT-HIT" });
+        return json(res, 200, withCacheStatus(waitingResult, forceRefresh ? "FORCE-WAIT-HIT" : "WAIT-HIT"), { "X-Bidamax-Cache": forceRefresh ? "FORCE-WAIT-HIT" : "WAIT-HIT" });
       }
     }
 
@@ -167,7 +178,7 @@ export default async function handler(req, res) {
     await redisCommand([
       "SET", key, JSON.stringify(generated), "EX", String(CACHE_TTL_SECONDS)
     ]);
-    return json(res, 200, withCacheStatus(generated, "FALLBACK-MISS"), { "X-Bidamax-Cache": "FALLBACK-MISS" });
+    return json(res, 200, withCacheStatus(generated, forceRefresh ? "FORCE-FALLBACK-MISS" : "FALLBACK-MISS"), { "X-Bidamax-Cache": forceRefresh ? "FORCE-FALLBACK-MISS" : "FALLBACK-MISS" });
   } catch (error) {
     console.error("[terabox-cache]", error);
     return json(res, error.status || 500, {
