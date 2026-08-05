@@ -1,52 +1,25 @@
 import crypto from "node:crypto";
+import { Redis } from "@upstash/redis";
 
-const CACHE_TTL_SECONDS = 24 * 60 * 60;
-const LOCK_TTL_SECONDS = 30;
-const WAIT_ATTEMPTS = 15;
-const WAIT_DELAY_MS = 700;
-const ORIGIN_URL = process.env.TERABOX_ORIGIN_URL ||
-  "https://terabox-proxy-theta.vercel.app/api/terabox";
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-function json(res, status, body, extraHeaders = {}) {
-  res.statusCode = status;
+// 30 minutes by default. You can override this in Vercel with
+// TERABOX_CACHE_TTL_SECONDS, for example 3600 for one hour.
+const CACHE_TTL_SECONDS = Math.max(
+  60,
+  Number.parseInt(process.env.TERABOX_CACHE_TTL_SECONDS || "1800", 10) || 1800
+);
+
+function sendJson(res, status, body, cacheStatus) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
-  for (const [name, value] of Object.entries(extraHeaders)) {
-    res.setHeader(name, value);
+  if (cacheStatus) {
+    res.setHeader("X-Bidamax-Cache", cacheStatus);
   }
-  res.end(JSON.stringify(body));
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function getRedisConfig() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  return { url, token };
-}
-
-async function redisCommand(command) {
-  const { url, token } = getRedisConfig();
-  if (!url || !token) {
-    throw new Error("Redis REST environment variables are missing");
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(command)
-  });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok || !data || data.error) {
-    throw new Error(data?.error || `Redis command failed (${response.status})`);
-  }
-  return data.result;
+  return res.status(status).json(body);
 }
 
 function normalizeUrl(value) {
@@ -55,135 +28,135 @@ function normalizeUrl(value) {
 
 function cacheKeyFor(url) {
   const hash = crypto.createHash("sha256").update(url).digest("hex");
-  return `bidamax:terabox:v1:${hash}`;
+  return `terabox:v2:${hash}`;
 }
 
 function isValidGeneratorResponse(data) {
   return Boolean(data && Array.isArray(data.list) && data.list.length > 0);
 }
 
-function withCacheStatus(data, status) {
-  return { ...data, _bidamax_cache: status };
-}
-
-async function readCache(key) {
-  const value = await redisCommand(["GET", key]);
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    return isValidGeneratorResponse(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-async function callOrigin(url, authorization) {
-  const headers = { "Content-Type": "application/json" };
-  if (authorization) headers.Authorization = authorization;
-
-  const response = await fetch(ORIGIN_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ url })
-  });
-
-  const text = await response.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`Generator returned invalid JSON (${response.status})`);
-  }
-
-  if (!response.ok || !isValidGeneratorResponse(data)) {
-    const message = data?.message || data?.error || `Generator failed (${response.status})`;
-    const error = new Error(message);
-    error.status = response.status >= 400 ? response.status : 502;
-    throw error;
-  }
-  return data;
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return json(res, 405, { error: "Method not allowed" });
+    return sendJson(res, 405, { error: "Method not allowed" });
   }
 
-  // Use the existing Authorization header from the app.
-  // If TERABOX_APP_AUTH is configured, it must match.
-  const expectedAuthorization = process.env.TERABOX_APP_AUTH;
-  const incomingAuthorization = req.headers.authorization || "";
-
-  if (expectedAuthorization && incomingAuthorization !== expectedAuthorization) {
-    return json(res, 401, { error: "Unauthorized" });
+  const auth = req.headers.authorization || "";
+  if (!auth || auth !== process.env.SECRET_TOKEN) {
+    return sendJson(res, 401, { error: "Unauthorized" });
   }
-
-  const url = normalizeUrl(req.body?.url);
-  if (!url || !/^https?:\/\//i.test(url)) {
-    return json(res, 400, { error: "A valid url is required" });
-  }
-
-  // The app sends forceRefresh=true only when a cached stream was returned
-  // but every generated quality failed the actual WebView playback test.
-  const forceRefresh = req.body?.forceRefresh === true ||
-    String(req.body?.forceRefresh || "").toLowerCase() === "true";
-
-  const key = cacheKeyFor(url);
-  const lockKey = `${key}:lock`;
-  const lockToken = crypto.randomUUID();
 
   try {
+    const url = normalizeUrl(req.body?.url);
+    const forceRefresh = req.body?.forceRefresh === true;
+
+    if (!url || !/^https?:\/\//i.test(url)) {
+      return sendJson(res, 400, { error: "A valid url is required" });
+    }
+
+    const cacheKey = cacheKeyFor(url);
+
+    console.log("[terabox-cache] REQUEST", {
+      cacheKey,
+      forceRefresh,
+    });
+
+    // When the app detects that every cached stream is expired/stuck,
+    // it calls this endpoint once with forceRefresh:true.
     if (forceRefresh) {
-      // Remove the stale generated-link response, then regenerate and overwrite it.
-      // The lock below still prevents normal requests from generating duplicates.
-      await redisCommand(["DEL", key]).catch(() => null);
+      await redis.del(cacheKey);
+      console.log("[terabox-cache] FORCE_REFRESH deleted stale cache", {
+        cacheKey,
+      });
     } else {
-      const cached = await readCache(key);
+      const cached = await redis.get(cacheKey);
+
+      if (cached && isValidGeneratorResponse(cached)) {
+        console.log("[terabox-cache] REDIS_HIT", { cacheKey });
+        return sendJson(
+          res,
+          200,
+          {
+            ...cached,
+            cached: true,
+            _bidamax_cache: "HIT",
+          },
+          "HIT"
+        );
+      }
+
+      // Remove an invalid/corrupted value instead of repeatedly returning it.
       if (cached) {
-        return json(res, 200, withCacheStatus(cached, "HIT"), { "X-Bidamax-Cache": "HIT" });
+        await redis.del(cacheKey).catch(() => null);
+        console.warn("[terabox-cache] INVALID_CACHE_DELETED", { cacheKey });
       }
     }
 
-    const acquired = await redisCommand([
-      "SET", lockKey, lockToken, "NX", "EX", String(LOCK_TTL_SECONDS)
-    ]);
+    console.log("[terabox-cache] GENERATING_NEW_LINKS", {
+      cacheKey,
+      forceRefresh,
+    });
 
-    if (acquired === "OK") {
-      try {
-        const generated = await callOrigin(url, req.headers.authorization);
-        await redisCommand([
-          "SET", key, JSON.stringify(generated), "EX", String(CACHE_TTL_SECONDS)
-        ]);
-        return json(res, 200, withCacheStatus(generated, forceRefresh ? "FORCE-MISS" : "MISS"), { "X-Bidamax-Cache": forceRefresh ? "FORCE-MISS" : "MISS" });
-      } finally {
-        const currentToken = await redisCommand(["GET", lockKey]).catch(() => null);
-        if (currentToken === lockToken) {
-          await redisCommand(["DEL", lockKey]).catch(() => null);
-        }
-      }
+    // Only send the public xAPIverse fields. Do not forward forceRefresh.
+    const response = await fetch("https://xapiverse.com/api/terabox", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "xAPIverse-Key": process.env.XAPIVERSE_KEY,
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    const text = await response.text();
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("[terabox-cache] INVALID_ORIGIN_JSON", {
+        status: response.status,
+        sample: text.slice(0, 250),
+      });
+      return sendJson(res, 502, {
+        error: "Generator returned invalid JSON",
+      });
     }
 
-    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
-      await sleep(WAIT_DELAY_MS);
-      const waitingResult = await readCache(key);
-      if (waitingResult) {
-        return json(res, 200, withCacheStatus(waitingResult, forceRefresh ? "FORCE-WAIT-HIT" : "WAIT-HIT"), { "X-Bidamax-Cache": forceRefresh ? "FORCE-WAIT-HIT" : "WAIT-HIT" });
-      }
+    if (!response.ok || !isValidGeneratorResponse(data)) {
+      console.error("[terabox-cache] ORIGIN_FAILED", {
+        status: response.status,
+        message: data?.message || data?.error || "Invalid generator response",
+      });
+      return sendJson(res, response.ok ? 502 : response.status, {
+        error: data?.error || "Unable to generate stream",
+        message: data?.message || `Generator failed (${response.status})`,
+      });
     }
 
-    // The first request may have failed or its lock may still be stale.
-    // Generate once as a safe fallback and overwrite the cache.
-    const generated = await callOrigin(url, req.headers.authorization);
-    await redisCommand([
-      "SET", key, JSON.stringify(generated), "EX", String(CACHE_TTL_SECONDS)
-    ]);
-    return json(res, 200, withCacheStatus(generated, forceRefresh ? "FORCE-FALLBACK-MISS" : "FALLBACK-MISS"), { "X-Bidamax-Cache": forceRefresh ? "FORCE-FALLBACK-MISS" : "FALLBACK-MISS" });
+    await redis.set(cacheKey, data, { ex: CACHE_TTL_SECONDS });
+
+    const status = forceRefresh ? "FORCE-MISS" : "MISS";
+    console.log("[terabox-cache] SAVED_TO_REDIS", {
+      cacheKey,
+      ttl: CACHE_TTL_SECONDS,
+      status,
+    });
+
+    return sendJson(
+      res,
+      200,
+      {
+        ...data,
+        cached: false,
+        _bidamax_cache: status,
+      },
+      status
+    );
   } catch (error) {
-    console.error("[terabox-cache]", error);
-    return json(res, error.status || 500, {
+    console.error("[terabox-cache] UNHANDLED_ERROR", error);
+    return sendJson(res, 500, {
       error: "Unable to generate stream",
-      message: error.message || "Unknown error"
+      message: error?.message || String(error),
     });
   }
 }
