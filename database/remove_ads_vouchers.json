@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-30T12:03:17.044Z",
+  "updatedAt": "2026-08-30T12:03:49.941Z",
   "vouchers": [
     {
       "code": "FB6F-1DB1-B5A1",
       "generatorHash": "1877035f969dc42a77cbc1eba4e00e4c36239940114c453d6996eb6b28a75ff4",
       "createdAt": 1788091397043,
       "expiresAt": 1788264197043,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "6f12c5f7790c2150e95423b0d544a27efe06ce113fcc2130a87cc528fb13d8a8",
+      "redeemedAt": 1788091429941
     }
   ]
 }
