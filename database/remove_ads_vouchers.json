@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-30T12:18:56.196Z",
+  "updatedAt": "2026-08-30T12:56:21.422Z",
   "vouchers": [
+    {
+      "code": "56F6-57FD-D8DA",
+      "generatorHash": "5a7faa05f9445199588166e636d5f68fe3b5fe46803b34ac14d2d2bd75a7b17e",
+      "createdAt": 1788094581422,
+      "expiresAt": 1788267381422,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "EC47-C52B-8EAD",
       "generatorHash": "1f33de4ba51f2e534eac76e9446fa4de0ce0cfae4a642a77725da2fcab82722c",
