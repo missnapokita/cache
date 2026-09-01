@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-01T12:07:20.127Z",
+  "updatedAt": "2026-09-01T12:07:35.444Z",
   "vouchers": [
     {
       "code": "358B-F8B8-BC90",
       "generatorHash": "d559828fa30450b6b5af1f9a6a3597ed71ce342f15f755ce03211a6210ee5ad3",
       "createdAt": 1788264440126,
       "expiresAt": 1788437240126,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "82bf781a31842e3b514e3d96132d74e40bc261c9be74c0dd46919c0d50688c16",
+      "redeemedAt": 1788264455444
     },
     {
       "code": "5643-8663-F79D",
