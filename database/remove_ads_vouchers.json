@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-30T14:18:19.538Z",
+  "updatedAt": "2026-09-01T02:27:02.639Z",
   "vouchers": [
+    {
+      "code": "5643-8663-F79D",
+      "generatorHash": "909bd43df50e582761ef1507cd81e830591ddbd3dad73058fde528efc810b1db",
+      "createdAt": 1788229622638,
+      "expiresAt": 1788402422638,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "5258-6075-FB18",
       "generatorHash": "47a12ead25e6ee4ac11808dae8419f54d09ce17984fa34a71e627b4e6f031639",
