@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-02T23:40:30.572Z",
+  "updatedAt": "2026-09-02T23:40:50.537Z",
   "vouchers": [
     {
       "code": "9D6C-5996-32DB",
       "generatorHash": "33c34fd8623b741651ca8bb9a6be861ab43c9122f62b4ae252b15538109e986a",
       "createdAt": 1788392430571,
       "expiresAt": 1788565230571,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "7d3573ba54248b34b7f99a1b7e6653d73bbc6d0d22063eb8376c17903942e8a6",
+      "redeemedAt": 1788392450536
     },
     {
       "code": "A1BA-FD65-45D8",
