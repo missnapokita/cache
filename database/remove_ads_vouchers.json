@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-02T02:53:36.105Z",
+  "updatedAt": "2026-09-02T02:54:02.212Z",
   "vouchers": [
     {
       "code": "1405-5966-FA17",
       "generatorHash": "8a87e13794a545504a4c3f5838b927bc0ef6b819c6277ece3bbe5b038a01aa90",
       "createdAt": 1788317616103,
       "expiresAt": 1788490416103,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "f6e259d6cf32f905cdf8b322a9e7cd649123bc406a91dd760dd7552b34706ffe",
+      "redeemedAt": 1788317642212
     },
     {
       "code": "25EF-4DED-5AB8",
