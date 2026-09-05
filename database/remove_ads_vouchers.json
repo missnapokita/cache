@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T06:58:09.518Z",
+  "updatedAt": "2026-09-05T06:58:30.697Z",
   "vouchers": [
     {
       "code": "FC8E-D146-62F9",
       "generatorHash": "f9ebc7fdffa3261234f9904f576e1fa8f1ca353c67774dac5950f07a96bee102",
       "createdAt": 1788591489517,
       "expiresAt": 1788764289517,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "7ec0c73af77ca646b0e08134f5ca6caac65ff1ce6e82a4da813e8644a18d8ae6",
+      "redeemedAt": 1788591510697
     },
     {
       "code": "6478-1FF8-5D96",
