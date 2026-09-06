@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-06T05:08:36.911Z",
+  "updatedAt": "2026-09-06T05:08:51.741Z",
   "vouchers": [
     {
       "code": "AFCD-A66D-1948",
       "generatorHash": "c51e11ed809e9425fc8afc64c3792dd1ad1ac5d5b0d51190389cdc82b39a2567",
       "createdAt": 1788671316910,
       "expiresAt": 1788844116910,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "fb8727dc695a9dfdc2268c51700c1f219d7a05d85323d7c3abe079f235edb5c9",
+      "redeemedAt": 1788671331741
     },
     {
       "code": "B681-0EBA-362A",
