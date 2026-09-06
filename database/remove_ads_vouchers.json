@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T15:36:56.228Z",
+  "updatedAt": "2026-09-06T04:32:39.177Z",
   "vouchers": [
+    {
+      "code": "B681-0EBA-362A",
+      "generatorHash": "24c2d5b69c8fb3377babb1209b43c41af943143f47935a26d78043362e43c18e",
+      "createdAt": 1788669159175,
+      "expiresAt": 1788841959175,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "7D34-B83C-307F",
       "generatorHash": "deb9ac4da6931c56b1d4383edb9b7284dce6dca36453c472c3e962bf6e98ae2b",
