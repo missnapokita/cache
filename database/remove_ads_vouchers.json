@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-06T05:08:51.741Z",
+  "updatedAt": "2026-09-09T00:46:53.883Z",
   "vouchers": [
+    {
+      "code": "554D-DB0C-7D42",
+      "generatorHash": "c297d2f4de4bd00da6c29b94a3d0ef5180b8b7a424904aff0c080b5047a72731",
+      "createdAt": 1788914813882,
+      "expiresAt": 1789087613882,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "AFCD-A66D-1948",
       "generatorHash": "c51e11ed809e9425fc8afc64c3792dd1ad1ac5d5b0d51190389cdc82b39a2567",
@@ -113,38 +121,6 @@
       "expiresAt": 1788402422638,
       "boundDevice": "cc6b5a02af5c6adf9d823de6fef269c4688eb92159f4564daa084ec2e391d596",
       "redeemedAt": 1788229638920
-    },
-    {
-      "code": "5258-6075-FB18",
-      "generatorHash": "47a12ead25e6ee4ac11808dae8419f54d09ce17984fa34a71e627b4e6f031639",
-      "createdAt": 1788099476484,
-      "expiresAt": 1788272276484,
-      "boundDevice": "1cbe9c77042f8d0006a3204161ffe97ecc71af0cdcb3eb034fc67ef22713fc6a",
-      "redeemedAt": 1788099499538
-    },
-    {
-      "code": "56F6-57FD-D8DA",
-      "generatorHash": "5a7faa05f9445199588166e636d5f68fe3b5fe46803b34ac14d2d2bd75a7b17e",
-      "createdAt": 1788094581422,
-      "expiresAt": 1788267381422,
-      "boundDevice": "6f12c5f7790c2150e95423b0d544a27efe06ce113fcc2130a87cc528fb13d8a8",
-      "redeemedAt": 1788094593847
-    },
-    {
-      "code": "EC47-C52B-8EAD",
-      "generatorHash": "1f33de4ba51f2e534eac76e9446fa4de0ce0cfae4a642a77725da2fcab82722c",
-      "createdAt": 1788092317961,
-      "expiresAt": 1788265117961,
-      "boundDevice": "b6951a5bf15d098323b12aac5b1863ef1f2bff115f5f578dad2f741da21771a4",
-      "redeemedAt": 1788092336196
-    },
-    {
-      "code": "FB6F-1DB1-B5A1",
-      "generatorHash": "1877035f969dc42a77cbc1eba4e00e4c36239940114c453d6996eb6b28a75ff4",
-      "createdAt": 1788091397043,
-      "expiresAt": 1788264197043,
-      "boundDevice": "6f12c5f7790c2150e95423b0d544a27efe06ce113fcc2130a87cc528fb13d8a8",
-      "redeemedAt": 1788091429941
     }
   ]
 }
