@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T10:42:18.340Z",
+  "updatedAt": "2026-09-10T10:42:34.033Z",
   "vouchers": [
     {
       "code": "2479-38AC-FB71",
       "generatorHash": "b161770e788d007b452a1c10e087f9c0168cbc21a2eb2958c7d153db773f9141",
       "createdAt": 1789036938338,
       "expiresAt": 1789209738338,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "562c342875a84c445e98c1d17fdad6429ae06324080dee4d7a923e8495bf16b6",
+      "redeemedAt": 1789036954033
     },
     {
       "code": "ABD3-9AC2-C664",
