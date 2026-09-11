@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-11T11:58:23.277Z",
+  "updatedAt": "2026-09-11T11:58:47.501Z",
   "vouchers": [
     {
       "code": "ADA9-B095-A58E",
       "generatorHash": "ce63545b0dac51476e18186e45c1fd23099821954570a90a893a6de0eb4e2b50",
       "createdAt": 1789127903276,
       "expiresAt": 1789300703276,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "612aeb0ee804dc8fac316f9d7a268f220c7ae8d11a829a4702e7b710b347dea6",
+      "redeemedAt": 1789127927501
     },
     {
       "code": "B757-55CA-0D13",
