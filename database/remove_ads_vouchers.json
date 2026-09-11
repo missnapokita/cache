@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-11T04:03:36.502Z",
+  "updatedAt": "2026-09-11T04:03:56.491Z",
   "vouchers": [
     {
       "code": "B757-55CA-0D13",
       "generatorHash": "3ae254ee8d4eb9bbc97fa9a09bfb6e45b05e4f3fd5920bfedde6f29683b4978f",
       "createdAt": 1789099416501,
       "expiresAt": 1789272216501,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "080b1641e766e1bf3d4c4a33cbd606410894cd3f87609486a633ab251b2a0672",
+      "redeemedAt": 1789099436490
     },
     {
       "code": "A264-47AF-7F80",
