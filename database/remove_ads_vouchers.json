@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-14T01:44:20.595Z",
+  "updatedAt": "2026-09-14T01:44:37.716Z",
   "vouchers": [
     {
       "code": "316C-816F-CB60",
       "generatorHash": "43b963c51b2e226edd46d5d694b8e3e02905af67a340000762f817e86350438d",
       "createdAt": 1789350260594,
       "expiresAt": 1789523060594,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "9cfa896c172be07be3a111be3ed188e9315c35f8a77b9fff3a0e5ea429e6452f",
+      "redeemedAt": 1789350277715
     },
     {
       "code": "98E7-26CE-D589",
