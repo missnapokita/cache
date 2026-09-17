@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-17T16:15:18.682Z",
+  "updatedAt": "2026-09-17T16:15:47.159Z",
   "vouchers": [
     {
       "code": "BD21-F7B1-0B0C",
       "generatorHash": "44b0b0c5047fca3cfbba369965fc5790ff99849e79c821cc266680ab19043bea",
       "createdAt": 1789661718681,
       "expiresAt": 1789834518681,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "beb388a704eb21e7cd8396300d0e8bee431e667dac1fb5cb43bb1d8eba5b9657",
+      "redeemedAt": 1789661747159
     },
     {
       "code": "0B10-8113-5179",
