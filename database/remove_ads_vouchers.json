@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-17T16:15:47.159Z",
+  "updatedAt": "2026-09-18T04:49:49.102Z",
   "vouchers": [
+    {
+      "code": "0E5B-6200-BE8D",
+      "generatorHash": "efe98560e60676a392ea9d34333a6aececebebcb01970184d456306f9ad5e4f9",
+      "createdAt": 1789706989101,
+      "expiresAt": 1789879789101,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "BD21-F7B1-0B0C",
       "generatorHash": "44b0b0c5047fca3cfbba369965fc5790ff99849e79c821cc266680ab19043bea",
@@ -89,22 +97,6 @@
       "expiresAt": 1789209738338,
       "boundDevice": "562c342875a84c445e98c1d17fdad6429ae06324080dee4d7a923e8495bf16b6",
       "redeemedAt": 1789036954033
-    },
-    {
-      "code": "ABD3-9AC2-C664",
-      "generatorHash": "ceab855e2456360f32eeabe328104fb876451faff5cdb8c49383726f3678f0a7",
-      "createdAt": 1788920692756,
-      "expiresAt": 1789093492756,
-      "boundDevice": "192c6f2cf04864259b9410ac423b0ed3a6aa18dce56fb088ba853c9a4e8c64f5",
-      "redeemedAt": 1788920711961
-    },
-    {
-      "code": "554D-DB0C-7D42",
-      "generatorHash": "c297d2f4de4bd00da6c29b94a3d0ef5180b8b7a424904aff0c080b5047a72731",
-      "createdAt": 1788914813882,
-      "expiresAt": 1789087613882,
-      "boundDevice": "e49bc9acc007ad574e94e8f256a54d7db5e5c28c072eec50a5edee716e06b706",
-      "redeemedAt": 1788914832493
     }
   ]
 }
