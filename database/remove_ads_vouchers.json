@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-18T04:50:06.086Z",
+  "updatedAt": "2026-09-19T03:14:05.901Z",
   "vouchers": [
+    {
+      "code": "4939-BEC4-2D95",
+      "generatorHash": "c7b7d8051a152bd965310d59b6b6582e259698149bab064d509ae7da7e48cce3",
+      "createdAt": 1789787645900,
+      "expiresAt": 1789960445900,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "0E5B-6200-BE8D",
       "generatorHash": "efe98560e60676a392ea9d34333a6aececebebcb01970184d456306f9ad5e4f9",
