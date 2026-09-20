@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-20T14:07:42.616Z",
+  "updatedAt": "2026-09-20T14:07:59.159Z",
   "vouchers": [
     {
       "code": "EE8D-C368-6A25",
       "generatorHash": "c9e1eba3d05f9884259c6bec97f913a8436419fbc91eb76189f41c93e8f82d7b",
       "createdAt": 1789913262615,
       "expiresAt": 1790086062615,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "2642f71e3b17c26a7cca2c038d1ab48c9073c4c4a8c92a5c91e63f39b787912f",
+      "redeemedAt": 1789913279159
     },
     {
       "code": "F464-FDEF-57AA",
