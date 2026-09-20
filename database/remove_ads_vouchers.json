@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-19T10:56:49.411Z",
+  "updatedAt": "2026-09-20T02:09:57.336Z",
   "vouchers": [
+    {
+      "code": "F464-FDEF-57AA",
+      "generatorHash": "e06e09818e7b67dcbc7cd9abe0e02bb72dbfc636ae9ae2eb4307f8f4d12dac20",
+      "createdAt": 1789870197335,
+      "expiresAt": 1790042997335,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "3147-0BB6-5BDB",
       "generatorHash": "7fa1dc92702e5e870bb1ffd503c68c2440fb65eacc621ade00e8947a6a9b1e74",
@@ -113,14 +121,6 @@
       "expiresAt": 1789272216501,
       "boundDevice": "080b1641e766e1bf3d4c4a33cbd606410894cd3f87609486a633ab251b2a0672",
       "redeemedAt": 1789099436490
-    },
-    {
-      "code": "A264-47AF-7F80",
-      "generatorHash": "e61a0f28dd5ef06c769e7c316ba7b69557887475983ff87d3797040c284b6c0c",
-      "createdAt": 1789055943699,
-      "expiresAt": 1789228743699,
-      "boundDevice": "b011c3aa28cf2efe73f4de05fb377f801984159b9558ac1fab17d99753fe86b7",
-      "redeemedAt": 1789055965815
     }
   ]
 }
