@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-20T02:09:57.336Z",
+  "updatedAt": "2026-09-20T02:10:13.956Z",
   "vouchers": [
     {
       "code": "F464-FDEF-57AA",
       "generatorHash": "e06e09818e7b67dcbc7cd9abe0e02bb72dbfc636ae9ae2eb4307f8f4d12dac20",
       "createdAt": 1789870197335,
       "expiresAt": 1790042997335,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "945aaf59b3e275b29d7ab321ea97196ddd49434d7dde9617b1aa64c0401965ad",
+      "redeemedAt": 1789870213955
     },
     {
       "code": "3147-0BB6-5BDB",
