@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-22T08:05:47.945Z",
+  "updatedAt": "2026-09-22T08:06:10.573Z",
   "vouchers": [
     {
       "code": "546A-2210-3563",
       "generatorHash": "efe98560e60676a392ea9d34333a6aececebebcb01970184d456306f9ad5e4f9",
       "createdAt": 1790064347944,
       "expiresAt": 1790237147944,
-      "boundDevice": "",
-      "redeemedAt": null
+      "boundDevice": "b81c02b0b678971f653ac6156d62f9d67ef3b1ffac3857010d10d15508eeda6c",
+      "redeemedAt": 1790064370573
     },
     {
       "code": "66B3-131B-16DA",
