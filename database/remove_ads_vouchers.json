@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-23T01:10:13.656Z",
+  "updatedAt": "2026-09-27T16:08:46.160Z",
   "vouchers": [
+    {
+      "code": "6928-139D-34E9",
+      "generatorHash": "d0de75291fcaa9ff32387b14867190f4975446b60050d866ba9a974ad8d6ab45",
+      "createdAt": 1790525326149,
+      "expiresAt": 1790698126149,
+      "boundDevice": "",
+      "redeemedAt": null
+    },
     {
       "code": "BB39-C5B0-C1FA",
       "generatorHash": "9566ba1b4071c9e67f0868765a2cf10c8a5cc8a7ab4d4707796b391fe690d4cb",
@@ -73,54 +81,6 @@
       "expiresAt": 1789960445900,
       "boundDevice": "0696be6558467191b7f1f477ff85cb242f21edb8219721532ffeaafe5936cab0",
       "redeemedAt": 1789787663862
-    },
-    {
-      "code": "0E5B-6200-BE8D",
-      "generatorHash": "efe98560e60676a392ea9d34333a6aececebebcb01970184d456306f9ad5e4f9",
-      "createdAt": 1789706989101,
-      "expiresAt": 1789879789101,
-      "boundDevice": "b81c02b0b678971f653ac6156d62f9d67ef3b1ffac3857010d10d15508eeda6c",
-      "redeemedAt": 1789707006085
-    },
-    {
-      "code": "BD21-F7B1-0B0C",
-      "generatorHash": "44b0b0c5047fca3cfbba369965fc5790ff99849e79c821cc266680ab19043bea",
-      "createdAt": 1789661718681,
-      "expiresAt": 1789834518681,
-      "boundDevice": "beb388a704eb21e7cd8396300d0e8bee431e667dac1fb5cb43bb1d8eba5b9657",
-      "redeemedAt": 1789661747159
-    },
-    {
-      "code": "0B10-8113-5179",
-      "generatorHash": "44a030fc2a9124231bf1b7343194e8cd66f83a11895840a75cc0e0c615b50ee4",
-      "createdAt": 1789619635997,
-      "expiresAt": 1789792435997,
-      "boundDevice": "e49bc9acc007ad574e94e8f256a54d7db5e5c28c072eec50a5edee716e06b706",
-      "redeemedAt": 1789619654925
-    },
-    {
-      "code": "E867-93AD-79C7",
-      "generatorHash": "44a030fc2a9124231bf1b7343194e8cd66f83a11895840a75cc0e0c615b50ee4",
-      "createdAt": 1789435312665,
-      "expiresAt": 1789608112665,
-      "boundDevice": "e49bc9acc007ad574e94e8f256a54d7db5e5c28c072eec50a5edee716e06b706",
-      "redeemedAt": 1789435338016
-    },
-    {
-      "code": "E74F-D444-4A9E",
-      "generatorHash": "799d150b363831d24e0c56d9009a81937a3d5edba3db929c6d11978d8a6bb657",
-      "createdAt": 1789392939134,
-      "expiresAt": 1789565739134,
-      "boundDevice": "3d0d1909b5118a33bcddeaa1737f88604cf87f8ff7adb477a20ddb6e543e0d00",
-      "redeemedAt": 1789392967759
-    },
-    {
-      "code": "316C-816F-CB60",
-      "generatorHash": "43b963c51b2e226edd46d5d694b8e3e02905af67a340000762f817e86350438d",
-      "createdAt": 1789350260594,
-      "expiresAt": 1789523060594,
-      "boundDevice": "9cfa896c172be07be3a111be3ed188e9315c35f8a77b9fff3a0e5ea429e6452f",
-      "redeemedAt": 1789350277715
     }
   ]
 }
